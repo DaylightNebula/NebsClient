@@ -32,7 +32,7 @@ jobs:
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
       - name: Build and test
-        run: ./gradlew build :cli:distZip :cli:distTar -Pversion="$VERSION"
+        run: ./gradlew build :cli:distZip :cli:distTar :api:allJar -Pversion="$VERSION"
 
       - name: Create GitHub release
         env:
@@ -45,4 +45,5 @@ jobs:
             --generate-notes \
             "mod/build/libs/nebs-client-mod-$VERSION.jar" \
             "cli/build/distributions/nebs-cli-$VERSION.zip" \
-            "cli/build/distributions/nebs-cli-$VERSION.tar"
+            "cli/build/distributions/nebs-cli-$VERSION.tar" \
+            "api/build/libs/nebs-api-$VERSION-all.jar"

@@ -8,6 +8,7 @@ A Gradle (Kotlin DSL) multi-module project. External programs can control Minecr
 | [`mod`](mod) | Fabric client mod (Minecraft 26.3). When started with `--socket-comm` it listens on its own local socket, registers itself in the nebs home, and runs the messages it receives. |
 | [`cli`](cli) | Command-line tool for sending messages to the mod and for installing and launching test clients. |
 | [`gradle-plugin`](gradle-plugin) | Gradle plugin (`com.nebs.socket`) whose tasks run the same commands as the CLI. |
+| [`api`](api) | Java/Kotlin library (`NebsClient`) for controlling clients from code: programs, tests and `.kts` scripts. |
 
 The CLI and the Gradle plugin both embed the mod jar, so they can install it into a client template without being pointed at it.
 
@@ -28,7 +29,7 @@ Requirements: JDK 25 or newer to build. The mod targets Java 25 (Minecraft's req
 The version is set in `gradle.properties` (currently `0.1.0`).
 
 - **CI** (`.github/workflows/ci.yml`) runs `./gradlew build`, including the tests, on every push to `master` and on every pull request. The real-client integration test skips itself there. Test reports are uploaded when the build fails.
-- **Releases** (`.github/workflows/release.yml`) run when you push a version tag. The workflow builds and tests with the version taken from the tag, then creates a GitHub release with the mod jar and the CLI distributions (`.zip` and `.tar`) attached. The release notes are generated from merged pull requests.
+- **Releases** (`.github/workflows/release.yml`) run when you push a version tag. The workflow builds and tests with the version taken from the tag, then creates a GitHub release with the mod jar, the CLI distributions (`.zip` and `.tar`) and the self-contained API jar (`nebs-api-<version>-all.jar`) attached. The release notes are generated from merged pull requests.
 
 ```bash
 git tag v0.1.0
@@ -267,6 +268,72 @@ ClientRegistry.broadcast(clients, ConnectToServer("localhost"))     // in parall
 ClientRegistry.select(home, names = listOf("Alice")).single().stop()
 ```
 
+## Java / Kotlin API
+
+The `api` module wraps everything above in one class, `com.nebs.api.NebsClient`. It works the same from Java and Kotlin, including in `.kts` scripts.
+
+```kotlin
+NebsClient().use { client ->          // launches a client and waits until it has loaded
+    client.connect("localhost")         // returns once the client is in the world
+    client.lookAt(0, 64, 0)
+    val status = client.status()        // typed results: status.health, status.heldItem?.id, ...
+    client.screenshot("spawn")
+}                                       // close() quits the game
+```
+
+```java
+try (NebsClient client = new NebsClient(new ClientOptions().name("Bob"))) {
+    client.connect("localhost", 25565);
+    client.mine(10, 64, -3);
+    System.out.println(client.inventory().count("cobblestone"));
+}
+```
+
+**Creating clients**
+
+| Code | What you get |
+|------|--------------|
+| `NebsClient()` / `new NebsClient()` | A newly launched offline client. It installs the template first if needed and waits until the client has loaded. `close()` quits it. |
+| `NebsClient { name = "Bob"; waitForReady = false }` (Kotlin), `new NebsClient(new ClientOptions().name("Bob").waitForReady(false))` (Java) | The same, configured. Options: `name`, `uuid`, `home`, `template`, `instance`, `waitForReady`, `readyTimeout`, `installIfMissing`, `quitOnClose`, `memory`, `windowSize`, `installProgress`. With `waitForReady = false` creation returns at once; call `waitUntilReady()` later. |
+| `NebsClient.attach("Alice")`, `NebsClient.attach()` | A client that's already running, by name, or the only one running. `close()` leaves it running; call `exit()` to quit it. |
+| `NebsClient.atSocket(path)` | Whatever is listening on a socket. |
+| `NebsClient.running()` | Every running client in the home. |
+| `client.spawn(options)` | A new client launched by this one. It quits when closed. |
+
+**Methods** mirror the [commands](#cli-usage), with Java-friendly names and overloads:
+- `connect`, `disconnect`, `ping`, `waitFor(ClientState.IN_WORLD)`, `waitUntilReady`, `respawn`, `exit`;
+- `status`, `inventory`, `block`, `blocks`, `lookTarget`, `entities`, `nearestEntity`, `players`, `world`, `screen`, `chatHistory`, `scoreboard`, `effects`;
+- `look`, `lookAt`, `move(MoveDirection.FORWARD, ticks)`, `startMoving`, `jump`, `sneak`, `sprint`, `stop`, `walkTo` (`goto` is a Java keyword), `follow`;
+- `attack`, `use`, `useOn`, `mine`, `place`, `selectSlot`, `hold`, `drop`, `swapHands`, `interact`;
+- `openInventory`, `closeScreen`, `clickSlot`, `clickButton`, `typeText`;
+- `chat`, `command`, `waitForChat`;
+- `screenshot`, `setWindowSize`, `options`, `setOption`, `setHudVisible`, `setDebugOverlay`, `perf`, `logs`, `reloadResources`;
+- `subscribe(listOf(Events.CHAT)) { event -> … }`, which returns an `AutoCloseable` subscription;
+- `run("mine 1 2 3")` for any CLI command line, and `send(message)` for raw protocol messages.
+
+Every method blocks until the client has finished, and throws `NebsException` (unchecked) with the client's explanation if it fails. Queries return typed objects (`PlayerStatus`, `Inventory`, `EntityInfo`, `ScreenInfo`, …). Calls on one instance are thread-safe.
+
+**Getting the library**
+
+- In this build or another Gradle build: `implementation(project(":api"))`, or `implementation("com.nebs:nebs-api:<version>")` after `./gradlew publishToMavenLocal`.
+- As one self-contained jar: `./gradlew :api:allJar` → `api/build/libs/nebs-api-<version>-all.jar`. Each GitHub release also attaches it.
+
+**Scripts.** Run a plain `.kts` script with the jar on the classpath; [examples/hello.kts](examples/hello.kts) launches a client, joins a server, walks and takes a screenshot:
+
+```bash
+kotlinc -cp api/build/libs/nebs-api-0.1.0-all.jar -script examples/hello.kts localhost 25565
+```
+
+`.main.kts` scripts work too, but in Kotlin 2.4.20 `@file:DependsOn` must be the **first line** of the file (even a comment or `#!` before it makes Kotlin ignore it), and the jar path must be **absolute**:
+
+```kotlin
+@file:DependsOn("/path/to/nebs-api-0.1.0-all.jar")
+import com.nebs.api.NebsClient
+NebsClient().use { it.connect("localhost") }
+```
+
+A Java version is in [examples/HelloNebs.java](examples/HelloNebs.java): `java -cp api/build/libs/nebs-api-0.1.0-all.jar examples/HelloNebs.java`.
+
 ## Gradle plugin
 
 The `gradle-plugin` module provides the plugin `com.nebs.socket`. Its tasks do everything `nebs-cli` does, so a build can control clients. For example, a dev build can join a test server after deploying to it.
@@ -329,6 +396,22 @@ Every task accepts `--home=<dir>`. Tasks that talk to clients pick them like the
 ```
 
 A task fails the build if no client matches, or if any selected client can't be reached or rejects the message. On success it prints each client's reply.
+
+Build scripts that apply the plugin can also use the [Java / Kotlin API](#java--kotlin-api) directly in their own tasks:
+
+```kotlin
+import com.nebs.api.NebsClient
+
+tasks.register("smokeTest") {
+    doLast {
+        NebsClient { name = "Tester" }.use { client ->
+            client.connect("localhost", 25566)
+            check(client.status().health > 0)
+            client.screenshot("smoke-test")
+        }
+    }
+}
+```
 
 You can also register preconfigured tasks:
 

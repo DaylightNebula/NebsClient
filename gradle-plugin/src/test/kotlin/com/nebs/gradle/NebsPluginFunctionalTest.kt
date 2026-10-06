@@ -25,6 +25,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** Runs the plugin in a real Gradle build against fake clients registered in the project's `.nebs`. */
 class NebsPluginFunctionalTest {
@@ -140,6 +141,31 @@ class NebsPluginFunctionalTest {
     fun `subscribe is refused`() {
         fakeClient("Alice")
         assertContains(gradle("nebs", "--command=subscribe").buildAndFail().output, "use nebs-cli")
+    }
+
+    @Test
+    fun `build scripts can use the NebsClient API`() {
+        fakeClient("Alice")
+        dir.resolve("build.gradle.kts").writeText(
+            """
+            import com.nebs.api.NebsClient
+
+            plugins { id("com.nebs.socket") }
+
+            tasks.register("lookAround") {
+                val home = file(".nebs").toPath()
+                doLast {
+                    NebsClient.attach(home = home).use { client ->
+                        client.lookAt(0, 64, 0)
+                        println("status of " + client.name + ": " + client.ping().state)
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+        val output = gradle("lookAround").build().output
+        assertContains(output, "status of Alice")
+        assertTrue(received["Alice"]!!.any { it.javaClass.simpleName == "LookAt" })
     }
 
     @Test

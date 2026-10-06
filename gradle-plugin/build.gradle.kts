@@ -12,6 +12,8 @@ apply(from = rootProject.file("gradle/bundle-nebs-mod.gradle.kts"))
 
 dependencies {
     implementation(project(":core"))
+    // On the plugin's classpath, so build scripts that apply the plugin can use NebsClient in their own tasks.
+    implementation(project(":api"))
     testImplementation(kotlin("test"))
 }
 

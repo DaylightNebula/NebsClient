@@ -71,6 +71,8 @@ class ClientTarget(val name: String, val socket: Path, val entry: ClientEntry? =
 }
 
 internal fun stopProcess(process: ProcessHandle, timeoutMs: Long): Boolean {
+    // Can't wait for (or kill) ourselves; only happens when a client is registered under this process's pid.
+    if (process.pid() == ProcessHandle.current().pid()) return true
     try {
         process.onExit().get(timeoutMs, TimeUnit.MILLISECONDS)
     } catch (_: TimeoutException) {
