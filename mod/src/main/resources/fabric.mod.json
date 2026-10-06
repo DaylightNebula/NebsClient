@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "nebs_client",
+  "version": "${version}",
+  "name": "Nebs Client",
+  "description": "Client-side bridge that lets external applications control Minecraft over a local socket. Enable with --socket-comm.",
+  "authors": ["Noah Shaw"],
+  "license": "All-Rights-Reserved",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      { "adapter": "kotlin", "value": "com.nebs.mod.NebsClientMod" }
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=${java_version}",
+    "fabric-api": "*",
+    "fabric-language-kotlin": "*"
+  }
+}

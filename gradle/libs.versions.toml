@@ -1,0 +1,26 @@
+[versions]
+# Minecraft 26.x targets Java 25; everything else targets Gradle's minimum JVM so the plugin
+# (and the core library it depends on) can be used in any Gradle 9 build.
+java-mod = "25"
+java-lib = "17"
+kotlin = "2.4.20"
+kotlinx-serialization = "1.11.0" # keep in sync with what fabric-language-kotlin bundles
+
+# Fabric — check https://fabricmc.net/develop
+minecraft = "26.3"
+fabric-loader = "0.19.5"
+fabric-loom = "1.18-SNAPSHOT"
+fabric-api = "0.161.0+26.3"
+fabric-language-kotlin = "1.14.1+kotlin.2.4.20"
+
+[libraries]
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }
+fabric-loader = { module = "net.fabricmc:fabric-loader", version.ref = "fabric-loader" }
+fabric-api = { module = "net.fabricmc.fabric-api:fabric-api", version.ref = "fabric-api" }
+fabric-language-kotlin = { module = "net.fabricmc:fabric-language-kotlin", version.ref = "fabric-language-kotlin" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+fabric-loom = { id = "net.fabricmc.fabric-loom", version.ref = "fabric-loom" }
