@@ -228,7 +228,7 @@ Launched clients:
 - **never log in**. They start with `--offlineDeveloperMode` and a dummy token, so they make no calls to Microsoft/Mojang auth. The name defaults to a random `NebsNNNN`. The UUID defaults to the one an offline-mode server would give that name. You can set either.
 - can only join **offline-mode servers** (`online-mode=false` in `server.properties`).
 - start with socket communication on, registered in the home they were launched from.
-- keep running after the CLI or Gradle exits. Stop them with `client stop` / `quit`.
+- are detached from whatever launched them. They keep running after the CLI, Gradle or your program exits, even if it is interrupted (Ctrl-C), killed or its terminal is closed. Stop them with `client stop`, `quit` or the API's `close()`/`exit()`. On macOS and Linux each client gets its own process group; Windows doesn't have process groups, so there a client is still tied to the console that started it.
 - get an `options.txt` with first-launch prompts off, pause-on-focus-loss off and `maxFps:30`, so several can run side by side.
 - always run with **vsync off** (re-applied on every launch). With vsync on, macOS blocks a window that isn't on screen during its first frame, and a client started in the background never finishes loading.
 
@@ -310,6 +310,8 @@ try (NebsClient client = new NebsClient(new ClientOptions().name("Bob"))) {
 - `screenshot`, `setWindowSize`, `options`, `setOption`, `setHudVisible`, `setDebugOverlay`, `perf`, `logs`, `reloadResources`;
 - `subscribe(listOf(Events.CHAT)) { event -> … }`, which returns an `AutoCloseable` subscription;
 - `run("mine 1 2 3")` for any CLI command line, and `send(message)` for raw protocol messages.
+
+**Clients you don't close keep running.** If your program ends without calling `close()`, or is interrupted or killed, the client stays up. Pick it up again later with `NebsClient.attach("Bob")` or `NebsClient.running()`, or stop it with `nebs-cli client stop Bob`. Only `close()` / try-with-resources / `use {}` (for clients you launched) and `exit()` quit the game.
 
 Every method blocks until the client has finished, and throws `NebsException` (unchecked) with the client's explanation if it fails. Queries return typed objects (`PlayerStatus`, `Inventory`, `EntityInfo`, `ScreenInfo`, …). Calls on one instance are thread-safe.
 

@@ -64,7 +64,8 @@ object ClientLauncher {
     /**
      * Starts a client and returns once the process has started; use [ClientProcess.awaitReady] to wait
      * for it to load. If the template isn't installed yet, it is installed first (unless
-     * [LaunchSpec.installIfMissing] is off). The client keeps running after this JVM exits.
+     * [LaunchSpec.installIfMissing] is off). The client is detached: it keeps running after this
+     * JVM exits, even if it is interrupted or killed, until it is quit.
      *
      * @throws TemplateNotInstalledException if the template isn't installed and installing is off.
      * @throws IllegalStateException if a client is already running in the instance directory.
@@ -109,13 +110,7 @@ object ClientLauncher {
             ),
         )
 
-        val log = instanceDir.resolve("logs/launcher-output.log").toFile()
-        val process = ProcessBuilder(command)
-            .directory(instanceDir.toFile())
-            .redirectErrorStream(true)
-            .redirectOutput(log)
-            .redirectInput(ProcessBuilder.Redirect.from(nullDevice()))
-            .start()
+        val process = startDetached(command, instanceDir, instanceDir.resolve("logs/launcher-output.log"))
 
         val info = InstanceInfo(
             name = profile.name,
@@ -125,7 +120,41 @@ object ClientLauncher {
             template = template.dir.toString(),
         )
         info.write(instanceDir)
-        return ClientProcess(instanceDir, info, process.toHandle())
+        return ClientProcess(instanceDir, info, process)
+    }
+
+    /**
+     * Starts the game so it outlives whatever launched it: it keeps running when the launching
+     * program exits, is interrupted (Ctrl-C), killed, or its terminal is closed. Only `quit`/stop
+     * (or killing the game itself) ends it.
+     *
+     * On macOS/Linux a `/bin/sh` with job control (`set -m`) starts the game as a background job in
+     * its own process group, so signals sent to the launcher's group never reach it, then exits;
+     * the game is re-parented to init/launchd. Windows has no process groups to escape, so the game
+     * is started directly.
+     */
+    private fun startDetached(command: List<String>, dir: Path, log: Path): ProcessHandle {
+        if (Platform.current.os == "windows") {
+            return ProcessBuilder(command)
+                .directory(dir.toFile())
+                .redirectErrorStream(true)
+                .redirectOutput(log.toFile())
+                .redirectInput(ProcessBuilder.Redirect.from(java.io.File("NUL")))
+                .start()
+                .toHandle()
+        }
+        val script = "set -m; \"\$@\" </dev/null >\"\$NEBS_LOG\" 2>&1 & echo \$!"
+        val shell = ProcessBuilder(listOf("/bin/sh", "-c", script, "nebs-launch") + command)
+            .directory(dir.toFile())
+            .redirectErrorStream(true)
+            .redirectInput(ProcessBuilder.Redirect.from(java.io.File("/dev/null")))
+            .apply { environment()["NEBS_LOG"] = log.toString() }
+            .start()
+        val output = shell.inputStream.bufferedReader().readText().trim()
+        shell.waitFor()
+        val pid = output.lines().lastOrNull()?.trim()?.toLongOrNull()
+            ?: throw IllegalStateException("Couldn't start the client: $output")
+        return ProcessHandle.of(pid).orElseThrow { IllegalStateException("The client exited immediately; see $log") }
     }
 
     private fun writeOptions(file: Path) {
@@ -141,6 +170,4 @@ object ClientLauncher {
         options.putAll(REQUIRED_OPTIONS)
         Files.write(file, options.map { (key, value) -> "$key:$value" })
     }
-
-    private fun nullDevice() = java.io.File(if (Platform.current.os == "windows") "NUL" else "/dev/null")
 }

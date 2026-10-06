@@ -99,6 +99,10 @@ import kotlin.time.toKotlinDuration
  * }
  * ```
  *
+ * A client that is never closed keeps running after your program ends, even if the program is
+ * interrupted (Ctrl-C), killed or its terminal is closed. Find it again with [attach] or [running],
+ * and stop it with [exit] or `nebs-cli client stop`.
+ *
  * Use [attach] for clients that are already running (closing those leaves them running).
  *
  * Every method blocks until the client has done the work and throws [NebsException] when it

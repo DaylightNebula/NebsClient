@@ -14,4 +14,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "nebs-client"
 
-include("core", "mod", "cli", "gradle-plugin", "api")
+include("core", "mod", "cli", "gradle-plugin", "api", "test-minestom")

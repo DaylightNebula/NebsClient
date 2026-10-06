@@ -36,7 +36,10 @@ public class ClientOptions {
     /** Install the template first if it isn't installed (about 700 MB the first time). */
     public var installIfMissing: Boolean = true
 
-    /** Whether [NebsClient.close] quits the game. */
+    /**
+     * Whether [NebsClient.close] quits the game. Either way, a client that is never closed keeps
+     * running after the program ends.
+     */
     public var quitOnClose: Boolean = true
 
     /** Maximum JVM heap for the game, e.g. `2G`. */
