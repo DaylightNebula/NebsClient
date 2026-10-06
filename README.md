@@ -19,9 +19,23 @@ Requirements: JDK 25 or newer to build. The mod targets Java 25 (Minecraft's req
 ./gradlew build
 ```
 
-- Mod jar: `mod/build/libs/nebs-client-mod-1.0.0.jar` (bundles `core`; needs Fabric API and Fabric Language Kotlin installed)
+- Mod jar: `mod/build/libs/nebs-client-mod-0.1.0.jar` (bundles `core`; needs Fabric API and Fabric Language Kotlin installed)
 - CLI: `./gradlew :cli:installDist`, then run `cli/build/install/nebs-cli/bin/nebs-cli`
 - Real-client integration test (needs network and a display; it uses `cli/build/nebs-it` as its home and downloads about 700 MB there the first time): `./gradlew :cli:test -Pnebs.integration=true`
+
+## Releases
+
+The version is set in `gradle.properties` (currently `0.1.0`).
+
+- **CI** (`.github/workflows/ci.yml`) runs `./gradlew build`, including the tests, on every push to `master` and on every pull request. The real-client integration test skips itself there. Test reports are uploaded when the build fails.
+- **Releases** (`.github/workflows/release.yml`) run when you push a version tag. The workflow builds and tests with the version taken from the tag, then creates a GitHub release with the mod jar and the CLI distributions (`.zip` and `.tar`) attached. The release notes are generated from merged pull requests.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Tags must look like `v1.2.3`. A tag with a suffix, like `v1.2.3-beta.1`, makes a pre-release. Remember to bump `version` in `gradle.properties` afterwards, so local builds don't keep the released version number.
 
 ## The nebs home folder
 
@@ -187,7 +201,7 @@ dependencyResolutionManagement { repositories { mavenLocal(); mavenCentral() } }
 
 // build.gradle.kts
 plugins {
-    id("com.nebs.socket") version "1.0.0"
+    id("com.nebs.socket") version "0.1.0"
 }
 
 nebs {

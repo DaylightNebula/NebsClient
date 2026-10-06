@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.fabric.loom) apply false
 }
 
+// The version lives in gradle.properties so releases can override it: -Pversion=1.2.3
 allprojects {
     group = "com.nebs"
-    version = "1.0.0"
 }
