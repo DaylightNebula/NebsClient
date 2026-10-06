@@ -8,6 +8,8 @@ plugins {
 
 val javaVersion = libs.versions.java.lib.get()
 
+apply(from = rootProject.file("gradle/bundle-nebs-mod.gradle.kts"))
+
 dependencies {
     implementation(project(":core"))
     testImplementation(kotlin("test"))

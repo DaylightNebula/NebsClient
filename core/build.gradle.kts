@@ -25,6 +25,20 @@ kotlin {
     }
 }
 
+// Versions the launcher installs by default, kept in sync with what the mod is built against.
+tasks.processResources {
+    val props = mapOf(
+        "minecraft" to libs.versions.minecraft.get(),
+        "fabric_loader" to libs.versions.fabric.loader.get(),
+        "fabric_api" to libs.versions.fabric.api.get(),
+        "fabric_language_kotlin" to libs.versions.fabric.language.kotlin.get(),
+    )
+    inputs.properties(props)
+    filesMatching("nebs-versions.properties") {
+        expand(props)
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
 }

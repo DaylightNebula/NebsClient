@@ -12,7 +12,7 @@ import java.nio.channels.SocketChannel
 import java.nio.file.Path
 
 /** A connection to the mod's Unix domain socket, for use by external applications. */
-class SocketClient(path: Path = SocketDefaults.defaultPath()) : AutoCloseable {
+class SocketClient(path: Path) : AutoCloseable {
     private val channel = SocketChannel.open(StandardProtocolFamily.UNIX).apply {
         connect(UnixDomainSocketAddress.of(path))
     }

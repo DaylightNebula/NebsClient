@@ -1,5 +1,7 @@
 package com.nebs.gradle
 
+import com.nebs.core.ClientEntry
+import com.nebs.core.ClientRegistry
 import com.nebs.core.MessageCodec
 import com.nebs.core.message.Message
 import com.nebs.core.message.Response
@@ -10,6 +12,8 @@ import java.nio.channels.Channels
 import java.nio.channels.ServerSocketChannel
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.concurrent.thread
 import kotlin.io.path.deleteRecursively
@@ -20,72 +24,112 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
-/** Runs the plugin in a real Gradle build against a fake client socket. */
+/** Runs the plugin in a real Gradle build against fake clients registered in the project's `.nebs`. */
 class NebsPluginFunctionalTest {
     private lateinit var dir: Path
-    private lateinit var socket: Path
-    private lateinit var server: ServerSocketChannel
-    private val received = CopyOnWriteArrayList<Message>()
+    private val servers = mutableListOf<ServerSocketChannel>()
+    private val received = ConcurrentHashMap<String, MutableList<Message>>()
 
     @BeforeTest
     fun setUp() {
-        // Keep the path short: Unix socket paths are limited to ~104 characters on macOS.
+        // Keep paths short: Unix socket paths are limited to ~104 characters on macOS.
         dir = Files.createTempDirectory("nebs")
-        socket = dir.resolve("s.sock")
-        server = ServerSocketChannel.open(StandardProtocolFamily.UNIX).bind(UnixDomainSocketAddress.of(socket))
-        thread(isDaemon = true) {
-            while (server.isOpen) {
-                val client = runCatching { server.accept() }.getOrNull() ?: break
-                client.use {
-                    val reader = Channels.newReader(it, Charsets.UTF_8).buffered()
-                    val writer = Channels.newWriter(it, Charsets.UTF_8)
-                    val message = MessageCodec.read(reader) ?: return@use
-                    received += message
-                    MessageCodec.write(writer, Response.ok("handled $message"))
-                }
-            }
-        }
         dir.resolve("settings.gradle.kts").writeText("")
-        dir.resolve("build.gradle.kts").writeText(
-            """
-            plugins { id("com.nebs.socket") }
-            nebs { socketPath = "$socket" }
-            """.trimIndent(),
-        )
+        dir.resolve("build.gradle.kts").writeText("""plugins { id("com.nebs.socket") }""")
     }
 
     @AfterTest
     @OptIn(kotlin.io.path.ExperimentalPathApi::class)
     fun tearDown() {
-        server.close()
+        servers.forEach { it.close() }
         dir.deleteRecursively()
+    }
+
+    /** A fake client that records messages and replies with its name; registered in `<dir>/.nebs` unless [register] is false. */
+    private fun fakeClient(name: String, register: Boolean = true): Path {
+        val socket = dir.resolve("$name.sock")
+        val server = ServerSocketChannel.open(StandardProtocolFamily.UNIX).bind(UnixDomainSocketAddress.of(socket))
+        servers += server
+        thread(isDaemon = true) {
+            while (server.isOpen) {
+                val client = runCatching { server.accept() }.getOrNull() ?: break
+                client.use {
+                    val message = MessageCodec.read(Channels.newReader(it, Charsets.UTF_8).buffered()) ?: return@use
+                    received.getOrPut(name) { CopyOnWriteArrayList() } += message
+                    MessageCodec.write(Channels.newWriter(it, Charsets.UTF_8), Response.ok("$name handled $message", mapOf("state" to "menu")))
+                }
+            }
+        }
+        if (register) {
+            val file = ClientRegistry.register(dir.resolve(".nebs"), ClientEntry.forCurrentProcess(name, UUID.randomUUID().toString(), socket, dir))
+            Files.move(file, file.resolveSibling("$name-fake.json")) // fake clients share this test's pid
+        }
+        return socket
     }
 
     private fun gradle(vararg args: String) =
         GradleRunner.create().withProjectDir(dir.toFile()).withPluginClasspath().withArguments(*args)
 
+    private fun connect(host: String, port: Int) = MessageCodec.decode("""{"type":"connect","host":"$host","port":$port}""")
+
     @Test
-    fun `nebsConnect sends a connect message`() {
+    fun `the only running client is picked automatically`() {
+        fakeClient("Alice")
         val result = gradle("nebsConnect", "--host=mc.example.com", "--port=25570").build()
-        assertContains(result.output, "handled ConnectToServer(host=mc.example.com, port=25570)")
-        assertEquals(listOf(MessageCodec.decode("""{"type":"connect","host":"mc.example.com","port":25570}""")), received)
+        assertContains(result.output, "Alice handled ConnectToServer(host=mc.example.com, port=25570)")
+        assertEquals(listOf(connect("mc.example.com", 25570)), received["Alice"]?.toList())
     }
 
     @Test
-    fun `nebs runs a cli command line`() {
-        gradle("nebs", "--command=connect localhost:25566").build()
-        assertEquals(listOf(MessageCodec.decode("""{"type":"connect","host":"localhost","port":25566}""")), received)
+    fun `several clients need --client or --all`() {
+        fakeClient("Alice")
+        fakeClient("Bob")
+        assertContains(gradle("nebs", "--command=ping").buildAndFail().output, "choose with --client")
+
+        gradle("nebs", "--command=connect a.b:1", "--client=bob").build()
+        assertEquals(listOf(connect("a.b", 1)), received["Bob"]?.toList())
+        assertEquals(null, received["Alice"]?.toList())
+
+        val all = gradle("nebsConnect", "--host=c.d", "--all").build().output
+        assertContains(all, "Alice: Alice handled")
+        assertContains(all, "Bob: Bob handled")
+        assertEquals(connect("c.d", 25565), received["Alice"]!!.single())
+    }
+
+    @Test
+    fun `list shows running clients`() {
+        fakeClient("Alice")
+        fakeClient("Bob")
+        val output = gradle("nebsListClients").build().output
+        assertContains(output, "Alice")
+        assertContains(output, "Bob")
+        assertContains(output, "menu")
+    }
+
+    @Test
+    fun `socket option reaches unregistered clients`() {
+        val socket = fakeClient("Loner", register = false)
+        gradle("nebs", "--command=ping", "--socket=$socket").build()
+        assertEquals(1, received["Loner"]!!.size)
+    }
+
+    @Test
+    fun `home can be moved`() {
+        val elsewhere = Files.createTempDirectory("nebs-elsewhere")
+        dir.resolve("build.gradle.kts").writeText(
+            """
+            plugins { id("com.nebs.socket") }
+            nebs { home = file("${elsewhere.toString().replace("\\", "/")}") }
+            """.trimIndent(),
+        )
+        fakeClient("Alice") // registered in <dir>/.nebs, not in the configured home
+        assertContains(gradle("nebs", "--command=ping").buildAndFail().output, "no clients are running in $elsewhere")
+        gradle("nebs", "--command=ping", "--home=${dir.resolve(".nebs")}").build()
     }
 
     @Test
     fun `invalid command fails the build`() {
-        val result = gradle("nebs", "--command=bogus").buildAndFail()
-        assertContains(result.output, "unknown command 'bogus'")
-    }
-
-    @Test
-    fun `unreachable socket fails the build`() {
-        val result = gradle("nebsConnect", "--host=localhost", "--socket=${dir.resolve("missing.sock")}").buildAndFail()
-        assertContains(result.output, "Could not reach client")
+        fakeClient("Alice")
+        assertContains(gradle("nebs", "--command=bogus").buildAndFail().output, "unknown command 'bogus'")
     }
 }

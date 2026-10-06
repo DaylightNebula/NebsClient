@@ -2,7 +2,10 @@ package com.nebs.mod.handler
 
 import com.nebs.core.message.ConnectToServer
 import com.nebs.core.message.Message
+import com.nebs.core.message.Ping
+import com.nebs.core.message.Quit
 import com.nebs.core.message.Response
+import com.nebs.core.message.SpawnClient
 
 /**
  * Routes each core [Message] to its handler. The `when` is exhaustive over the sealed [Message]
@@ -13,6 +16,9 @@ import com.nebs.core.message.Response
 object MessageDispatcher {
     fun dispatch(message: Message): Response = when (message) {
         is ConnectToServer -> ConnectToServerHandler.handle(message)
+        is Ping -> PingHandler.handle()
+        is Quit -> QuitHandler.handle()
+        is SpawnClient -> SpawnHandler.handle(message)
         is Response -> Response.error("Response messages are only sent by the client")
     }
 }

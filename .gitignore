@@ -37,3 +37,6 @@ build/
 
 ### Fabric / Loom ###
 run/
+
+### nebs (client templates, instances, running-client registry) ###
+.nebs/
