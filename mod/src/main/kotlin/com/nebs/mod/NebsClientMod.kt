@@ -4,6 +4,8 @@ import com.nebs.core.ClientEntry
 import com.nebs.core.ClientRegistry
 import com.nebs.core.NebsHome
 import com.nebs.core.SocketDefaults
+import com.nebs.mod.events.EventHub
+import com.nebs.mod.runtime.Ticker
 import com.nebs.mod.socket.SocketBridge
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
@@ -33,6 +35,8 @@ object NebsClientMod : ClientModInitializer {
         val socket = argValue(args, SocketDefaults.PATH_ARG)?.let(Path::of)
             ?: ClientRegistry.socketFor(ProcessHandle.current().pid())
 
+        Ticker.init()
+        EventHub.init()
         val bridge = SocketBridge(socket)
         bridge.start()
         this.home = home

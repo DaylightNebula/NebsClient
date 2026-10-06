@@ -5,6 +5,10 @@ import com.nebs.core.NebsHome
 import com.nebs.core.SocketDefaults
 import com.nebs.core.command.CommandException
 import com.nebs.core.command.Commands
+import com.nebs.core.message.Subscribe
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlin.concurrent.thread
 import java.io.IOException
 import java.nio.file.Path
 import kotlin.system.exitProcess
@@ -111,11 +115,18 @@ private fun run(options: Options, words: List<String>): Boolean {
     }
 }
 
+private val prettyJson = Json { prettyPrint = true }
+
+/** Pretty-printed JSON, indented under a reply line. */
+fun formatResult(result: JsonElement): String =
+    prettyJson.encodeToString(JsonElement.serializer(), result).lines().joinToString("\n") { "  $it" }
+
 /** Sends a client command to the selected clients and prints each reply. */
 private fun send(options: Options, words: List<String>): Boolean {
     val message = Commands.parse(words)
     val targets = ClientRegistry.select(options.home, options.socket, options.clients, options.all)
     val labelled = targets.size > 1 || options.all
+    if (message is Subscribe) return subscribe(message, targets, labelled)
 
     var ok = true
     for ((target, result) in ClientRegistry.broadcast(targets, message)) {
@@ -125,6 +136,7 @@ private fun send(options: Options, words: List<String>): Boolean {
                 val detail = reply.detail.ifEmpty { "ok" }
                 if (reply.success) println("$prefix$detail") else System.err.println("${prefix}error: $detail")
                 reply.data.forEach { (key, value) -> println("  $key: $value") }
+                reply.result?.let { println(formatResult(it)) }
                 ok = ok && reply.success
             },
             onFailure = { e ->
@@ -134,5 +146,27 @@ private fun send(options: Options, words: List<String>): Boolean {
             },
         )
     }
+    return ok
+}
+
+/** Prints events from every target, one line each, until all connections close or the user presses Ctrl-C. */
+private fun subscribe(message: Subscribe, targets: List<com.nebs.core.ClientTarget>, labelled: Boolean): Boolean {
+    var ok = true
+    val threads = targets.map { target ->
+        thread(name = "subscribe-${target.name}") {
+            val prefix = if (labelled) "${target.name}: " else ""
+            try {
+                com.nebs.core.SocketClient(target.socket).use { client ->
+                    client.subscribe(message) { event -> println("$prefix${event.event} ${event.data}") }
+                }
+                System.err.println("${prefix}connection closed")
+            } catch (e: IOException) {
+                System.err.println("${prefix}error: ${e.message}")
+                ok = false
+            }
+        }
+    }
+    System.err.println("Streaming events from ${targets.joinToString { it.name }} (Ctrl-C to stop)")
+    threads.forEach { it.join() }
     return ok
 }

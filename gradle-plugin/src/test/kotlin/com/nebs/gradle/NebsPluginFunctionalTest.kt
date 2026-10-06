@@ -5,6 +5,8 @@ import com.nebs.core.ClientRegistry
 import com.nebs.core.MessageCodec
 import com.nebs.core.message.Message
 import com.nebs.core.message.Response
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.gradle.testkit.runner.GradleRunner
 import java.net.StandardProtocolFamily
 import java.net.UnixDomainSocketAddress
@@ -56,7 +58,8 @@ class NebsPluginFunctionalTest {
                 client.use {
                     val message = MessageCodec.read(Channels.newReader(it, Charsets.UTF_8).buffered()) ?: return@use
                     received.getOrPut(name) { CopyOnWriteArrayList() } += message
-                    MessageCodec.write(Channels.newWriter(it, Charsets.UTF_8), Response.ok("$name handled $message", mapOf("state" to "menu")))
+                    val reply = Response(true, "$name handled $message", mapOf("state" to "menu"), buildJsonObject { put("echo", name) })
+                    MessageCodec.write(Channels.newWriter(it, Charsets.UTF_8), reply)
                 }
             }
         }
@@ -125,6 +128,18 @@ class NebsPluginFunctionalTest {
         fakeClient("Alice") // registered in <dir>/.nebs, not in the configured home
         assertContains(gradle("nebs", "--command=ping").buildAndFail().output, "no clients are running in $elsewhere")
         gradle("nebs", "--command=ping", "--home=${dir.resolve(".nebs")}").build()
+    }
+
+    @Test
+    fun `structured results are printed`() {
+        fakeClient("Alice")
+        assertContains(gradle("nebs", "--command=status").build().output, "\"echo\": \"Alice\"")
+    }
+
+    @Test
+    fun `subscribe is refused`() {
+        fakeClient("Alice")
+        assertContains(gradle("nebs", "--command=subscribe").buildAndFail().output, "use nebs-cli")
     }
 
     @Test

@@ -1,7 +1,9 @@
 package com.nebs.core
 
+import com.nebs.core.message.Event
 import com.nebs.core.message.Message
 import com.nebs.core.message.Response
+import com.nebs.core.message.Subscribe
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.Writer
@@ -26,6 +28,25 @@ class SocketClient(path: Path) : AutoCloseable {
             is Response -> reply
             null -> throw IOException("Socket closed before a response was received")
             else -> throw IOException("Expected a response but got $reply")
+        }
+    }
+
+    /**
+     * Subscribes to events and calls [onEvent] for each one until the connection closes (returns
+     * normally) or this client is closed from another thread.
+     *
+     * @throws IOException if the client rejects the subscription.
+     */
+    fun subscribe(subscribe: Subscribe, onEvent: (Event) -> Unit) {
+        val reply = send(subscribe)
+        if (!reply.success) throw IOException(reply.detail)
+        while (true) {
+            val message = try {
+                MessageCodec.read(reader)
+            } catch (_: IOException) {
+                null
+            } ?: return
+            if (message is Event) onEvent(message)
         }
     }
 

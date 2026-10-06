@@ -6,6 +6,9 @@ import com.nebs.core.SocketDefaults
 import com.nebs.core.command.Commands
 import com.nebs.core.message.ConnectToServer
 import com.nebs.core.message.Message
+import com.nebs.core.message.Subscribe
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.provider.ListProperty
@@ -17,6 +20,8 @@ import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
 import java.io.IOException
 import java.nio.file.Path
+
+private val prettyJson = Json { prettyPrint = true }
 
 internal const val UNTRACKED_REASON = "Talks to running game clients; there are no outputs to cache."
 
@@ -69,6 +74,7 @@ abstract class NebsSocketTask : NebsTargetedTask() {
     @TaskAction
     fun send() {
         val message = failOnError { message() }
+        if (message is Subscribe) throw GradleException("subscribe streams events forever; use nebs-cli for it")
         val targets = targets()
         val labelled = targets.size > 1 || all.getOrElse(false)
 
@@ -79,6 +85,9 @@ abstract class NebsSocketTask : NebsTargetedTask() {
                     val detail = reply.detail.ifEmpty { "ok" }
                     if (reply.success) logger.lifecycle("$prefix$detail") else logger.error("${prefix}error: $detail")
                     reply.data.forEach { (key, value) -> logger.lifecycle("  $key: $value") }
+                    reply.result?.let { result ->
+                        logger.lifecycle(prettyJson.encodeToString(JsonElement.serializer(), result).lines().joinToString("\n") { "  $it" })
+                    }
                     !reply.success
                 },
                 onFailure = { e ->

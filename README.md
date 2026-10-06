@@ -89,21 +89,113 @@ Run it with a command to send one message and exit. The exit code is 0 on succes
 | `--all` | every running client, in parallel. Each reply line is prefixed with the client's name. |
 | `--socket PATH` | whatever is listening on that socket, registered or not. |
 
-| Command | Message sent | Description |
-|---------|--------------|-------------|
-| `connect <host> [port]` | `ConnectToServer` | Tells the client to join the server at `host:port`. The game window is brought to the front and focused, and if the client is already in a world it leaves that world first. The port defaults to `25565`. `connect <host>:<port>` also works. |
-| `ping` | `Ping` | Prints the client's `name`, `uuid`, `state` (`loading`, `menu`, `connecting` or `in-world`) and `server`. |
-| `quit` | `Quit` | Shuts the client down. |
-| `spawn [--name N] [--uuid U] [--instance DIR] [--template DIR]` | `SpawnClient` | The client launches another offline client in the same home (see [Test clients](#test-clients)). All options are optional. Prints the new client's `name`, `uuid`, `socket`, `pid` and `instance`. |
-| `client list` | — | Running clients in the home: name, state, server, pid and game folder. |
-| `client install` / `launch` / `stop` | — | Install and manage test clients. See [Test clients](#test-clients). |
-| `help` | — | Shows usage. |
-| `exit` | — | Leaves the interactive shell. |
+Replies are printed as a summary line, followed by any key/value `data` and, for queries, the structured `result` as JSON. Run `nebs-cli help` for the same list as below.
+
+**Commands that need the client to be in a world** (everything except `connect`, `ping`, `wait-for`, `quit`, `spawn`, the screen commands, and the capture commands) fail with "Not in a world" otherwise. Coordinates are block coordinates; `yaw` is 0 = south, 90 = west, and `pitch` goes from -90 (up) to 90 (down). Durations are in ticks (20 per second) or in seconds where the option is called `--timeout`.
+
+#### Session
+| Command | What it does |
+|---------|--------------|
+| `connect <host> [port]` | Join a server (port defaults to `25565`; `host:port` also works). Leaves any current world first and brings the window to the front. |
+| `disconnect` | Leave the server and return to the title screen. |
+| `ping` | `name`, `uuid`, `state` (`loading`, `menu`, `connecting`, `in-world`) and `server`. |
+| `wait-for <state> [--timeout S]` | Wait for `loading`, `menu`, `connecting`, `in-world`, `alive` or `dead` (default 30 s). |
+| `respawn` | Press "Respawn" on the death screen. |
+| `quit` | Shut the client down. |
+| `spawn [--name N] [--uuid U] [--instance DIR] [--template DIR]` | The client launches another offline client in the same home (see [Test clients](#test-clients)). |
+
+#### Observation
+| Command | Result |
+|---------|--------|
+| `status` | Position, block position, yaw/pitch, health, absorption, food, saturation, XP, game mode, dimension, on-ground/in-water/sprinting/sneaking, dead, selected slot, held item. |
+| `inventory` | Every non-empty slot (hotbar 0-8, main 9-35, armor 36-39, offhand 40) with item id, count, name, damage and enchantments. |
+| `block <x> <y> <z>` | Block id, state properties, and whether the chunk is loaded. |
+| `blocks <x1> <y1> <z1> <x2> <y2> <z2>` | Non-air blocks in a box (up to 32768 blocks): per-block counts plus a list (first 4096). |
+| `look-target` | The block (with face and distance) or entity under the crosshair. |
+| `entities [--radius R] [--type T]` | Nearby entities, nearest first: id, type, name, uuid, position, distance, health. `--type` takes `pig` or `minecraft:pig`. |
+| `players` | Tab list: name, uuid, latency, game mode. |
+| `world` | Dimension, time of day, day, game time, rain/thunder, difficulty, server. |
+| `screen` | The open screen: type, title, buttons (with `#index`), text fields, and for containers every slot plus the carried item. |
+| `chat-history [count]` | The last messages (default 20), each with a `seq` number, `type` (`chat`, `system`, `action-bar`), sender and text. |
+| `scoreboard` | The sidebar: title and lines. |
+| `effects` | Active potion effects with level and remaining ticks. |
+
+#### Movement
+A new `move`, `goto` or `follow` replaces the one in progress; `stop` ends it and releases every key nebs is holding.
+
+| Command | What it does |
+|---------|--------------|
+| `look <yaw> <pitch>` / `look-at <x> <y> <z>` | Turn the camera. |
+| `move <forward\|back\|left\|right> [ticks]` | Hold a movement key for some ticks, or until `stop`. |
+| `jump` | Jump once. |
+| `sneak <on\|off>` / `sprint <on\|off>` | Hold or release sneak or sprint. |
+| `stop` | Stop moving and release all keys. |
+| `goto <x> <z> [--timeout S]` | Walk in a straight line to a position, jumping up single-block steps. It is not a pathfinder: it fails if it gets stuck. |
+| `follow <player\|entity-id> [--distance D]` | Keep walking toward a player or entity (default within 3 blocks) until `stop`. |
+
+#### Interaction
+| Command | What it does |
+|---------|--------------|
+| `attack [entity-id]` | Attack an entity, or whatever is under the crosshair. Fails if the entity is out of reach. |
+| `use [--ticks N]` | Right-click with the held item (on the crosshair target, or in the air). `--ticks` keeps holding, e.g. 40 to eat. |
+| `use-on <x> <y> <z> [face]` | Right-click a block face (default `up`): doors, buttons, levers, beds, chests. |
+| `mine <x> <y> <z> [--timeout S]` | Break a block with the held item, at normal speed. Fails if something is in the way or it's out of reach. |
+| `place <x> <y> <z>` | Place the held block at a position, against any solid neighbour within reach. |
+| `select-slot <0-8>` | Select a hotbar slot. |
+| `hold <item>` | Put an item (`diamond_sword` or `minecraft:diamond_sword`) in the main hand, moving it from the inventory if needed. |
+| `drop [--all]` | Drop one of the held item, or the whole stack. |
+| `swap-hands` | Swap main-hand and off-hand items. |
+| `interact <entity-id>` | Right-click an entity (trade with villagers, mount, …). |
+
+#### Inventory and screens
+| Command | What it does |
+|---------|--------------|
+| `open-inventory` / `close-screen` | Open the inventory; close whatever screen or container is open. |
+| `click-slot <slot> [--button N] [--mode M]` | Click a slot of the open container (numbers from `screen`). Modes: `pickup` (default), `quick_move` (shift-click), `swap` (with `--button` = hotbar slot), `clone`, `throw`, `quick_craft`, `pickup_all`. |
+| `click-button <label\|#index>` | Click a button by its label (exact, then partial match) or its index from `screen`. Works on any screen, including the title and multiplayer menus. |
+| `type-text <text…>` | Type into the focused text field (or the only one on screen). |
+
+#### Chat
+| Command | What it does |
+|---------|--------------|
+| `chat <message…>` | Send a chat message. A leading `/` runs it as a command. |
+| `command <command…>` | Run a command, with or without `/`, e.g. `command give @s diamond 3`. |
+| `wait-for-chat <regex> [--timeout S] [--since SEQ]` | Wait for a chat or system message matching the regex, arriving after this request or after message `SEQ` (from `chat-history`). |
+
+#### Capture and debugging
+| Command | What it does |
+|---------|--------------|
+| `screenshot [name]` | Save `<game dir>/screenshots/<name>.png` (default `nebs-<timestamp>`). Replies with `path`, `width` and `height`. |
+| `set-window <width> <height>` | Resize the window, in screen points. On high-DPI displays, screenshots are larger. |
+| `options` / `set-option <name> <value>` | List or change any game option by name, e.g. `fov 90`, `renderDistance 8`, `guiScale 2`, `graphicsPreset fast`. |
+| `hud <on\|off>` / `f3 <on\|off>` | Show or hide the HUD (F1) or the debug overlay (F3). Hiding the HUD also hides F3. |
+| `perf` | FPS, memory, loaded chunks, entity count, window size in pixels. |
+| `logs [lines] [--errors]` | The end of the client log; `--errors` keeps only warnings, errors and stack traces. |
+| `reload-resources` | Reload resource packs (F3+T) and reply when finished. |
+
+#### Events
+| Command | What it does |
+|---------|--------------|
+| `subscribe [event…]` | Stream events as they happen until Ctrl-C (CLI only). Events: `chat`, `system`, `action-bar`, `join`, `disconnect`, `death`, `respawn`, `health`, `screen`, `inventory`. With `--all`, each line is prefixed with the client's name. |
+
+#### Local commands
+| Command | What it does |
+|---------|--------------|
+| `client list` | Running clients in the home: name, state, server, pid and game folder. |
+| `client install` / `launch` / `stop` | Install and manage test clients. See [Test clients](#test-clients). |
+| `help` | Show usage. |
+| `exit` | Leave the interactive shell. |
 
 Examples:
 
 ```bash
 nebs-cli client list
+nebs-cli --all status
+nebs-cli --client Alice command give @s diamond_pickaxe
+nebs-cli --client Alice hold diamond_pickaxe
+nebs-cli --client Alice mine 10 64 -3
+nebs-cli --all screenshot before-join
+nebs-cli --client Alice subscribe chat death
 nebs-cli connect localhost 25566                       # the only running client
 nebs-cli --client Alice connect localhost 25566
 nebs-cli --client Alice --client Bob ping
@@ -264,20 +356,24 @@ tasks.register<NebsLaunchClientTask>("launchBot") {
 
 Messages are newline-delimited JSON in UTF-8, one message per line. The `type` field identifies the message. The client replies to every message with a `response` on the same connection. A connection can send any number of messages.
 
+Every command above is one message type, named as the command (e.g. `{"type":"mine","x":1,"y":64,"z":-3,"timeout":30.0}`). Its fields are the command's arguments. The exact shapes are the classes in `core/src/main/kotlin/com/nebs/core/message/`. Two message types travel the other way:
+
 | `type` | Direction | Fields |
 |--------|-----------|--------|
-| `connect` | app → client | `host` (string), `port` (int, optional, default `25565`) |
-| `ping` | app → client | — |
-| `quit` | app → client | — |
-| `spawn` | app → client | `name`, `uuid`, `instance`, `template` (all optional strings) |
-| `response` | client → app | `success` (bool), `detail` (string), `data` (string map, optional) |
+| `response` | client → app | `success` (bool), `detail` (string), `data` (string map), `result` (any JSON, for queries; optional) |
+| `event` | client → app, after `subscribe` | `event` (string), `data` (object), `time` (epoch ms) |
 
 ```
 → {"type":"connect","host":"localhost","port":25566}
-← {"type":"response","success":true,"detail":"Connecting to localhost:25566","data":{}}
-→ {"type":"ping"}
-← {"type":"response","success":true,"detail":"pong","data":{"name":"Alice","uuid":"…","state":"menu"}}
+← {"type":"response","success":true,"detail":"Connecting to localhost:25566","data":{},"result":null}
+→ {"type":"block","x":4,"y":-61,"z":-2}
+← {"type":"response","success":true,"detail":"minecraft:grass_block","data":{},"result":{"x":4,"y":-61,"z":-2,"block":"minecraft:grass_block","properties":{"snowy":"false"},"loaded":true}}
+→ {"type":"subscribe","events":["chat"]}
+← {"type":"response","success":true,"detail":"Subscribed to chat","data":{},"result":null}
+← {"type":"event","event":"chat","data":{"seq":6,"sender":"Bob","message":"<Bob> hi"},"time":1791266000000}
 ```
+
+A `subscribe` turns the connection into an event stream, so use a separate connection for it.
 
 Any language can talk to a client: read its `socket` from its file in `<home>/clients/`, then write JSON lines to it. For example, from a shell:
 
@@ -291,10 +387,14 @@ echo '{"type":"connect","host":"localhost"}' | nc -U "$socket"
 1. Add a `@Serializable @SerialName("your-type") data class ... : Message` in `core/src/main/kotlin/com/nebs/core/message/`.
    `Message` is a sealed interface, so the codec picks up the new class automatically.
 2. The mod's `MessageDispatcher` uses an exhaustive `when`, so the build fails until you handle the new message there.
-   Add a handler under `mod/.../handler/`. Run any game-state changes on the client thread with `Minecraft.getInstance().execute { ... }`.
-3. Add its command syntax to `Commands` in `core/.../command/Commands.kt` (`specs` and `parse`).
+   Add a handler under `mod/.../handler/`. The helpers in `mod/.../runtime/` cover the common needs:
+   - `ClientThread.call` / `withPlayer` run code on the client thread and return its result.
+   - `Ticker.run` repeats a step every tick until it returns a value, for anything that takes time.
+   - `Input.hold` keeps a key pressed.
+   - `Json` turns items, blocks and entities into JSON.
+   Throwing `IllegalStateException` or `IllegalArgumentException` turns into an error reply with that message.
+3. Add a `Spec` for it to `Commands.specs` in `core/.../command/Commands.kt`: name, usage, description, group and parser.
+   Add a sample line to `AllCommandsTest`; the test fails until you do, and it checks the message survives the wire format.
    The CLI and the Gradle plugin's `nebs` task get the command automatically.
    Client selection (`--client`, `--all`, …) works for it automatically.
    Optionally add a dedicated typed task to `gradle-plugin/.../NebsTasks.kt` (extend `NebsSocketTask`). Document the command in the tables above.
-
-For example, a `screenshot` message would follow the same steps. Its handler saves the image in the client's game folder and returns the file's path in the reply's `data`, so no binary data goes over the socket. Then `nebs-cli --all screenshot` collects one file per client.

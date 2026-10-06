@@ -2,6 +2,8 @@ package com.nebs.mod.socket
 
 import com.nebs.core.MessageCodec
 import com.nebs.core.message.Response
+import com.nebs.core.message.Subscribe
+import com.nebs.mod.events.EventHub
 import com.nebs.mod.NebsClientMod.logger
 import com.nebs.mod.handler.MessageDispatcher
 import kotlinx.serialization.SerializationException
@@ -58,6 +60,10 @@ class SocketBridge(private val path: Path) : AutoCloseable {
                 val response = try {
                     val message = MessageCodec.read(reader) ?: break
                     logger.info("Received {}", message)
+                    if (message is Subscribe) {
+                        stream(message, reader, writer)
+                        break
+                    }
                     MessageDispatcher.dispatch(message)
                 } catch (e: SerializationException) {
                     Response.error("Malformed message: ${e.message}")
@@ -68,6 +74,26 @@ class SocketBridge(private val path: Path) : AutoCloseable {
             }
         } catch (e: IOException) {
             logger.debug("Socket connection closed", e)
+        }
+    }
+
+    /** Turns the connection into an event stream until the other side closes it. */
+    private fun stream(subscribe: Subscribe, reader: java.io.BufferedReader, writer: java.io.Writer) {
+        val types = subscribe.events.ifEmpty { com.nebs.core.message.Event.TYPES }
+        MessageCodec.write(writer, Response.ok("Subscribed to ${types.joinToString()}"))
+        val subscription = EventHub.subscribe(types) { line ->
+            synchronized(writer) {
+                writer.write(line)
+                writer.write("\n")
+                writer.flush()
+            }
+        }
+        subscription.use {
+            try {
+                // Nothing more is expected from the other side; reading just tells us when it hangs up.
+                while (MessageCodec.read(reader) != null) Unit
+            } catch (_: Exception) {
+            }
         }
     }
 
