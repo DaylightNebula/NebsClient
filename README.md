@@ -67,10 +67,10 @@ dependencyResolutionManagement {
 
 // build.gradle.kts
 plugins {
-    id("dsh.nebsclient.socket") version "v0.3.0"                                  // Gradle plugin
+    id("dsh.nebsclient.socket") version "v0.3.1"                                  // Gradle plugin
 }
 dependencies {
-    implementation("com.github.DaylightNebula.NebsClient:nebs-api:v0.3.0")  // Java/Kotlin API (pulls in core)
+    implementation("com.github.DaylightNebula.NebsClient:nebs-api:v0.3.1")  // Java/Kotlin API (pulls in core)
 }
 ```
 

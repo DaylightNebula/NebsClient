@@ -1,7 +1,7 @@
 name: Release
 
-# Push a tag like v0.3.0 to build, test and publish a GitHub release.
-# Tags with a suffix (v0.3.0-beta.1) are marked as pre-releases.
+# Push a tag like v0.3.1 to build, test and publish a GitHub release.
+# Tags with a suffix (v0.3.1-beta.1) are marked as pre-releases.
 on:
   push:
     tags: ["v*"]

@@ -4,7 +4,7 @@ Requirements: Java 17+ for the library, the CLI and the plugin (Gradle 9+). The 
 on a Java 25 runtime that nebs downloads from Mojang, so you don't install it. Clients need a
 display. Servers they join must be Minecraft 26.3 with `online-mode=false`.
 
-Versions: `<tag>` below is a GitHub release tag such as `v0.3.0`, or a commit hash. Releases:
+Versions: `<tag>` below is a GitHub release tag such as `v0.3.1`, or a commit hash. Releases:
 https://github.com/DaylightNebula/NebsClient/releases
 
 ## Library (Java / Kotlin) from JitPack

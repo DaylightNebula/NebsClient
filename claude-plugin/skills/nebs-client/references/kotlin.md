@@ -97,14 +97,14 @@ Plain `.kts` with the self-contained jar (`nebs-api-<version>-all.jar`, attached
 release):
 
 ```bash
-kotlinc -cp nebs-api-0.3.0-all.jar -script hello.kts localhost 25565
+kotlinc -cp nebs-api-0.3.1-all.jar -script hello.kts localhost 25565
 ```
 
 `.main.kts`: `@file:DependsOn` must be the **very first line** (no comment or shebang before it),
 with an **absolute** path to the `-all` jar:
 
 ```kotlin
-@file:DependsOn("/abs/path/nebs-api-0.3.0-all.jar")
+@file:DependsOn("/abs/path/nebs-api-0.3.1-all.jar")
 import dsh.nebsclient.api.NebsClient
 NebsClient().use { it.connect("localhost") }
 ```
