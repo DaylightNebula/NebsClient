@@ -1,10 +1,12 @@
 package com.nebs.cli
 
+import com.nebs.core.ClaudeSkill
 import com.nebs.core.ClientRegistry
 import com.nebs.core.NebsHome
 import com.nebs.core.SocketDefaults
 import com.nebs.core.command.CommandException
 import com.nebs.core.command.Commands
+import com.nebs.core.command.Flags
 import com.nebs.core.message.Subscribe
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -39,6 +41,9 @@ private val USAGE = buildString {
     appendLine()
     appendLine("Local commands:")
     appendLine(ClientCommands.USAGE)
+    appendLine("  claude-skill [--dir DIR | --user]")
+    appendLine("                          Install the Claude Code skill for nebs into ./.claude/skills,")
+    appendLine("                          DIR, or ~/.claude/skills (--user).")
     appendLine("  ${"help".padEnd(24)}Show this message.")
     append("  ${"exit".padEnd(24)}Leave the interactive shell.")
 }
@@ -103,6 +108,7 @@ private fun run(options: Options, words: List<String>): Boolean {
                 true
             }
             "client" -> ClientCommands.run(options, words.drop(1))
+            "claude-skill" -> installClaudeSkill(Flags.parse(words.drop(1), setOf("dir"), setOf("user")))
             else -> send(options, words)
         }
     } catch (e: CommandException) {
@@ -113,6 +119,16 @@ private fun run(options: Options, words: List<String>): Boolean {
         System.err.println("error: ${e.message}")
         return false
     }
+}
+
+/** `claude-skill [--dir DIR | --user]`: installs the Claude Code skill bundled in this jar. */
+private fun installClaudeSkill(flags: Flags): Boolean {
+    if (flags.positional.isNotEmpty()) throw CommandException("claude-skill takes no arguments")
+    val dir = flags["dir"]?.let { Path.of(it).toAbsolutePath().normalize() }
+    if (dir != null && "user" in flags) throw CommandException("use either --dir or --user")
+    val installed = ClaudeSkill.install(dir ?: if ("user" in flags) ClaudeSkill.userDir() else ClaudeSkill.projectDir())
+    println("Installed the Claude skill into $installed")
+    return true
 }
 
 private val prettyJson = Json { prettyPrint = true }

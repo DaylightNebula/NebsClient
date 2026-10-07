@@ -38,6 +38,57 @@ git push origin v0.1.0
 
 Tags must look like `v1.2.3`. A tag with a suffix, like `v1.2.3-beta.1`, makes a pre-release. Remember to bump `version` in `gradle.properties` afterwards, so local builds don't keep the released version number.
 
+## JitPack
+
+Every tag and commit can be used from [JitPack](https://jitpack.io/#DaylightNebula/NebsClient); `jitpack.yml` installs JDK 25 and publishes the modules as `com.github.DaylightNebula.NebsClient:<module>:<tag>`:
+
+```kotlin
+// settings.gradle.kts
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven("https://jitpack.io")
+    }
+    // JitPack doesn't serve plugin markers, so point the plugin id at its module.
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "com.nebs.socket") {
+                useModule("com.github.DaylightNebula.NebsClient:gradle-plugin:${requested.version}")
+            }
+        }
+    }
+}
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}
+
+// build.gradle.kts
+plugins {
+    id("com.nebs.socket") version "v0.2.0"                                  // Gradle plugin
+}
+dependencies {
+    implementation("com.github.DaylightNebula.NebsClient:nebs-api:v0.2.0")  // Java/Kotlin API (pulls in core)
+}
+```
+
+The first request for a new tag makes JitPack build it, which takes a few minutes; open the JitPack page and press "Get it" to build ahead of time and see the log.
+
+## Claude Code
+
+[`claude-plugin/skills/nebs-client`](claude-plugin/skills/nebs-client) is a Claude Code skill that teaches Claude to use the CLI, the Java/Kotlin API and the Gradle plugin. Edit it whenever a command or API changes. It's available in several ways:
+
+| From | How |
+|------|-----|
+| GitHub | `/plugin marketplace add DaylightNebula/NebsClient`, then `/plugin install nebs-client@nebs` |
+| Gradle plugin | `./gradlew nebsInstallClaudeSkill` → `<root project>/.claude/skills/nebs-client` (`--dir=DIR`, or `--user` for `~/.claude/skills`) |
+| CLI | `nebs-cli claude-skill` → `./.claude/skills/nebs-client` (`--dir DIR` or `--user`) |
+| Library / `-all` jar | `ClaudeSkill.install(Path.of(".claude/skills"))` (`com.nebs.core`), or `java -cp nebs-api-<version>-all.jar com.nebs.core.ClaudeSkill [dir]` |
+
+The skill is bundled into the `core` jar at build time, so the copy installed from a jar always matches that version of nebs.
+
 ## The nebs home folder
 
 Everything nebs keeps on disk lives in one **home** folder, `./.nebs` in the current directory by default:
@@ -184,6 +235,7 @@ A new `move`, `goto` or `follow` replaces the one in progress; `stop` ends it an
 |---------|--------------|
 | `client list` | Running clients in the home: name, state, server, pid and game folder. |
 | `client install` / `launch` / `stop` | Install and manage test clients. See [Test clients](#test-clients). |
+| `claude-skill [--dir DIR \| --user]` | Install the [Claude Code skill](#claude-code) into `./.claude/skills`. |
 | `help` | Show usage. |
 | `exit` | Leave the interactive shell. |
 
@@ -387,6 +439,7 @@ Every task accepts `--home=<dir>`. Tasks that talk to clients pick them like the
 | `nebsInstallClient` | `--template=<dir>`, `--java=<path>` | Same as `client install`. |
 | `nebsLaunchClient` | `--name`, `--uuid`, `--instance`, `--template`, `--wait` | Same as `client launch`, including the automatic install. |
 | `nebsStopClient` | client choice | Same as `client stop`. |
+| `nebsInstallClaudeSkill` | `--dir=<dir>`, `--user` | Installs the [Claude Code skill](#claude-code) into `<root project>/.claude/skills`. |
 
 ```bash
 ./gradlew nebsLaunchClient --name=Alice --wait     # installs the template first if needed
@@ -482,4 +535,5 @@ echo '{"type":"connect","host":"localhost"}' | nc -U "$socket"
    Add a sample line to `AllCommandsTest`; the test fails until you do, and it checks the message survives the wire format.
    The CLI and the Gradle plugin's `nebs` task get the command automatically.
    Client selection (`--client`, `--all`, …) works for it automatically.
-   Optionally add a dedicated typed task to `gradle-plugin/.../NebsTasks.kt` (extend `NebsSocketTask`). Document the command in the tables above.
+   Optionally add a dedicated typed task to `gradle-plugin/.../NebsTasks.kt` (extend `NebsSocketTask`). Document the command in the tables above,
+   and in the Claude skill's [`references/commands.md`](claude-plugin/skills/nebs-client/references/commands.md).

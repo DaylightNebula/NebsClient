@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-minestom/nebs-client.test-minestom.main.iml" filepath="$PROJECT_DIR$/.idea/modules/test-minestom/nebs-client.test-minestom.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/NebsClient.iml" filepath="$PROJECT_DIR$/.idea/NebsClient.iml" />
     </modules>
   </component>
 </project>

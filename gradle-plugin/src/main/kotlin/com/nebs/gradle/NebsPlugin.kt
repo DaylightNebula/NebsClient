@@ -34,6 +34,7 @@ abstract class NebsExtension {
  * - `nebs --command="connect localhost 25566"` runs any client command; `nebsConnect` sends `connect`.
  *   Both go to the only running client, or to `--client=<name>` (repeatable) / `--all` / `--socket=<path>`.
  * - `nebsListClients`, `nebsInstallClient`, `nebsLaunchClient`, `nebsStopClient` manage clients.
+ * - `nebsInstallClaudeSkill` installs the Claude Code skill describing all of this.
  *
  * Builds can also register their own preconfigured tasks of any of these types.
  */
@@ -82,6 +83,13 @@ class NebsPlugin : Plugin<Project> {
         }
         project.tasks.register("nebsStopClient", NebsStopClientTask::class.java) { task ->
             task.description = "Stops running clients: [--client=N]... or --all."
+        }
+        project.tasks.withType(NebsInstallClaudeSkillTask::class.java).configureEach { task ->
+            task.group = GROUP
+            task.skillsDir.convention(rootDir.dir(".claude/skills").asFile.absolutePath)
+        }
+        project.tasks.register("nebsInstallClaudeSkill", NebsInstallClaudeSkillTask::class.java) { task ->
+            task.description = "Installs the Claude Code skill for nebs into <root project>/.claude/skills [--dir=DIR | --user]."
         }
     }
 

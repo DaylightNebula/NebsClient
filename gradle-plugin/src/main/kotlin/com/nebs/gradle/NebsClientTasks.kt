@@ -1,5 +1,6 @@
 package com.nebs.gradle
 
+import com.nebs.core.ClaudeSkill
 import com.nebs.core.ClientRegistry
 import com.nebs.core.launcher.ClientLauncher
 import com.nebs.core.launcher.InstallSpec
@@ -7,6 +8,7 @@ import com.nebs.core.launcher.LaunchSpec
 import com.nebs.core.launcher.ProgressListener
 import com.nebs.core.launcher.TemplateInstaller
 import com.nebs.core.message.Ping
+import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.provider.Property
@@ -155,5 +157,25 @@ abstract class NebsStopClientTask : NebsTargetedTask() {
             client.stop().also { logger.lifecycle("${client.name}: ${if (it) "stopped" else "still running"}") }
         }
         if (stuck.isNotEmpty()) throw GradleException("Could not stop ${stuck.joinToString { it.name }}")
+    }
+}
+
+/** Installs the Claude Code skill for nebs (bundled in this plugin) into a skills folder. */
+@UntrackedTask(because = "Writes into a folder that the user's tools own.")
+abstract class NebsInstallClaudeSkillTask : DefaultTask() {
+    /** The skills folder; the plugin defaults it to `<root project>/.claude/skills`. */
+    @get:Input
+    @get:Option(option = "dir", description = "Skills folder (default <root project>/.claude/skills).")
+    abstract val skillsDir: Property<String>
+
+    @get:Input
+    @get:Optional
+    @get:Option(option = "user", description = "Install into ~/.claude/skills instead.")
+    abstract val user: Property<Boolean>
+
+    @TaskAction
+    fun install() {
+        val dir = if (user.getOrElse(false)) ClaudeSkill.userDir() else Path.of(skillsDir.get())
+        logger.lifecycle("Installed the Claude skill into ${ClaudeSkill.install(dir, NebsPlugin::class.java)}")
     }
 }

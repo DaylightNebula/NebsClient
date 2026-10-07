@@ -1,0 +1,10 @@
+# JitPack build: https://jitpack.io/#DaylightNebula/NebsClient
+# The mod needs Java 25, which JitPack's `jdk:` list doesn't offer, so install it with SDKMAN.
+before_install:
+  - sdk install java 25.0.4-tem
+  - sdk use java 25.0.4-tem
+
+# Publish under JitPack's coordinates (com.github.DaylightNebula.NebsClient:<module>:<tag>), so the
+# POMs' dependencies between modules point at artifacts JitPack actually serves.
+install:
+  - ./gradlew publishToMavenLocal -x test -Pnebs.group=$GROUP.$ARTIFACT -Pversion=$VERSION

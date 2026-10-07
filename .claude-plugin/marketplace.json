@@ -1,0 +1,16 @@
+{
+  "name": "nebs",
+  "owner": {
+    "name": "DaylightNebula"
+  },
+  "metadata": {
+    "description": "Claude Code skills for nebs-client, a toolkit for controlling Minecraft test clients."
+  },
+  "plugins": [
+    {
+      "name": "nebs-client",
+      "source": "./claude-plugin",
+      "description": "Launch and control Minecraft test clients from the CLI, Java/Kotlin and Gradle."
+    }
+  ]
+}
