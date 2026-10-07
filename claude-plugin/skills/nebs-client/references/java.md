@@ -6,7 +6,7 @@ unchecked `NebsException`. Artifact `nebs-api` (see [setup.md](setup.md)). What 
 [commands.md](commands.md).
 
 ```java
-import com.nebs.api.*;
+import dsh.nebsclient.api.*;
 import java.time.Duration;
 import java.util.List;
 

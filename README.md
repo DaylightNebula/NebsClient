@@ -7,7 +7,7 @@ A Gradle (Kotlin DSL) multi-module project. External programs can control Minecr
 | [`core`](core) | Shared message model (`Message` interface + implementations), wire codec, socket client, command parsing, the registry of running clients, and the client launcher (template install + offline clients). Used by every other module. |
 | [`mod`](mod) | Fabric client mod (Minecraft 26.3). When started with `--socket-comm` it listens on its own local socket, registers itself in the nebs home, and runs the messages it receives. |
 | [`cli`](cli) | Command-line tool for sending messages to the mod and for installing and launching test clients. |
-| [`gradle-plugin`](gradle-plugin) | Gradle plugin (`com.nebs.socket`) whose tasks run the same commands as the CLI. |
+| [`gradle-plugin`](gradle-plugin) | Gradle plugin (`dsh.nebsclient.socket`) whose tasks run the same commands as the CLI. |
 | [`api`](api) | Java/Kotlin library (`NebsClient`) for controlling clients from code: programs, tests and `.kts` scripts. |
 
 The CLI and the Gradle plugin both embed the mod jar, so they can install it into a client template without being pointed at it.
@@ -52,7 +52,7 @@ pluginManagement {
     // JitPack doesn't serve plugin markers, so point the plugin id at its module.
     resolutionStrategy {
         eachPlugin {
-            if (requested.id.id == "com.nebs.socket") {
+            if (requested.id.id == "dsh.nebsclient.socket") {
                 useModule("com.github.DaylightNebula.NebsClient:gradle-plugin:${requested.version}")
             }
         }
@@ -67,7 +67,7 @@ dependencyResolutionManagement {
 
 // build.gradle.kts
 plugins {
-    id("com.nebs.socket") version "v0.2.0"                                  // Gradle plugin
+    id("dsh.nebsclient.socket") version "v0.2.0"                                  // Gradle plugin
 }
 dependencies {
     implementation("com.github.DaylightNebula.NebsClient:nebs-api:v0.2.0")  // Java/Kotlin API (pulls in core)
@@ -85,7 +85,7 @@ The first request for a new tag makes JitPack build it, which takes a few minute
 | GitHub | `/plugin marketplace add DaylightNebula/NebsClient`, then `/plugin install nebs-client@nebs` |
 | Gradle plugin | `./gradlew nebsInstallClaudeSkill` → `<root project>/.claude/skills/nebs-client` (`--dir=DIR`, or `--user` for `~/.claude/skills`) |
 | CLI | `nebs-cli claude-skill` → `./.claude/skills/nebs-client` (`--dir DIR` or `--user`) |
-| Library / `-all` jar | `ClaudeSkill.install(Path.of(".claude/skills"))` (`com.nebs.core`), or `java -cp nebs-api-<version>-all.jar com.nebs.core.ClaudeSkill [dir]` |
+| Library / `-all` jar | `ClaudeSkill.install(Path.of(".claude/skills"))` (`dsh.nebsclient.core`), or `java -cp nebs-api-<version>-all.jar dsh.nebsclient.core.ClaudeSkill [dir]` |
 
 The skill is bundled into the `core` jar at build time, so the copy installed from a jar always matches that version of nebs.
 
@@ -322,7 +322,7 @@ ClientRegistry.select(home, names = listOf("Alice")).single().stop()
 
 ## Java / Kotlin API
 
-The `api` module wraps everything above in one class, `com.nebs.api.NebsClient`. It works the same from Java and Kotlin, including in `.kts` scripts.
+The `api` module wraps everything above in one class, `dsh.nebsclient.api.NebsClient`. It works the same from Java and Kotlin, including in `.kts` scripts.
 
 ```kotlin
 NebsClient().use { client ->          // launches a client and waits until it has loaded
@@ -369,7 +369,7 @@ Every method blocks until the client has finished, and throws `NebsException` (u
 
 **Getting the library**
 
-- In this build or another Gradle build: `implementation(project(":api"))`, or `implementation("com.nebs:nebs-api:<version>")` after `./gradlew publishToMavenLocal`.
+- In this build or another Gradle build: `implementation(project(":api"))`, or `implementation("dsh.nebsclient:nebs-api:<version>")` after `./gradlew publishToMavenLocal`.
 - As one self-contained jar: `./gradlew :api:allJar` → `api/build/libs/nebs-api-<version>-all.jar`. Each GitHub release also attaches it.
 
 **Scripts.** Run a plain `.kts` script with the jar on the classpath; [examples/hello.kts](examples/hello.kts) launches a client, joins a server, walks and takes a screenshot:
@@ -382,7 +382,7 @@ kotlinc -cp api/build/libs/nebs-api-0.1.0-all.jar -script examples/hello.kts loc
 
 ```kotlin
 @file:DependsOn("/path/to/nebs-api-0.1.0-all.jar")
-import com.nebs.api.NebsClient
+import dsh.nebsclient.api.NebsClient
 NebsClient().use { it.connect("localhost") }
 ```
 
@@ -390,7 +390,7 @@ A Java version is in [examples/HelloNebs.java](examples/HelloNebs.java): `java -
 
 ## Gradle plugin
 
-The `gradle-plugin` module provides the plugin `com.nebs.socket`. Its tasks do everything `nebs-cli` does, so a build can control clients. For example, a dev build can join a test server after deploying to it.
+The `gradle-plugin` module provides the plugin `dsh.nebsclient.socket`. Its tasks do everything `nebs-cli` does, so a build can control clients. For example, a dev build can join a test server after deploying to it.
 
 ### Using it in another build
 
@@ -414,7 +414,7 @@ dependencyResolutionManagement { repositories { mavenLocal(); mavenCentral() } }
 
 // build.gradle.kts
 plugins {
-    id("com.nebs.socket") version "0.1.0"
+    id("dsh.nebsclient.socket") version "0.1.0"
 }
 
 nebs {
@@ -455,7 +455,7 @@ A task fails the build if no client matches, or if any selected client can't be 
 Build scripts that apply the plugin can also use the [Java / Kotlin API](#java--kotlin-api) directly in their own tasks:
 
 ```kotlin
-import com.nebs.api.NebsClient
+import dsh.nebsclient.api.NebsClient
 
 tasks.register("smokeTest") {
     doLast {
@@ -471,9 +471,9 @@ tasks.register("smokeTest") {
 You can also register preconfigured tasks:
 
 ```kotlin
-import com.nebs.gradle.NebsCommandTask
-import com.nebs.gradle.NebsConnectTask
-import com.nebs.gradle.NebsLaunchClientTask
+import dsh.nebsclient.gradle.NebsCommandTask
+import dsh.nebsclient.gradle.NebsConnectTask
+import dsh.nebsclient.gradle.NebsLaunchClientTask
 
 tasks.register<NebsConnectTask>("joinLocal") {
     host = "localhost"
@@ -494,7 +494,7 @@ tasks.register<NebsLaunchClientTask>("launchBot") {
 
 Messages are newline-delimited JSON in UTF-8, one message per line. The `type` field identifies the message. The client replies to every message with a `response` on the same connection. A connection can send any number of messages.
 
-Every command above is one message type, named as the command (e.g. `{"type":"mine","x":1,"y":64,"z":-3,"timeout":30.0}`). Its fields are the command's arguments. The exact shapes are the classes in `core/src/main/kotlin/com/nebs/core/message/`. Two message types travel the other way:
+Every command above is one message type, named as the command (e.g. `{"type":"mine","x":1,"y":64,"z":-3,"timeout":30.0}`). Its fields are the command's arguments. The exact shapes are the classes in `core/src/main/kotlin/dsh/nebsclient/core/message/`. Two message types travel the other way:
 
 | `type` | Direction | Fields |
 |--------|-----------|--------|
@@ -522,7 +522,7 @@ echo '{"type":"connect","host":"localhost"}' | nc -U "$socket"
 
 ## Adding a new message
 
-1. Add a `@Serializable @SerialName("your-type") data class ... : Message` in `core/src/main/kotlin/com/nebs/core/message/`.
+1. Add a `@Serializable @SerialName("your-type") data class ... : Message` in `core/src/main/kotlin/dsh/nebsclient/core/message/`.
    `Message` is a sealed interface, so the codec picks up the new class automatically.
 2. The mod's `MessageDispatcher` uses an exhaustive `when`, so the build fails until you handle the new message there.
    Add a handler under `mod/.../handler/`. The helpers in `mod/.../runtime/` cover the common needs:

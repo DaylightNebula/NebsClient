@@ -55,7 +55,7 @@ pluginManagement {
     }
     resolutionStrategy {
         eachPlugin {
-            if (requested.id.id == "com.nebs.socket") {
+            if (requested.id.id == "dsh.nebsclient.socket") {
                 useModule("com.github.DaylightNebula.NebsClient:gradle-plugin:${requested.version}")
             }
         }
@@ -64,7 +64,7 @@ pluginManagement {
 
 // build.gradle.kts
 plugins {
-    id("com.nebs.socket") version "<tag>"
+    id("dsh.nebsclient.socket") version "<tag>"
 }
 ```
 
@@ -88,7 +88,7 @@ The skill ships inside every nebs jar, so it always matches the version you use:
 |------|---------|
 | Gradle plugin | `./gradlew nebsInstallClaudeSkill` (`--user` for `~/.claude/skills`) |
 | CLI | `nebs-cli claude-skill` (`--dir DIR` or `--user`) |
-| Library / `-all` jar | `ClaudeSkill.install(Path.of(".claude/skills"))` (`com.nebs.core.ClaudeSkill`), or `java -cp nebs-api-<version>-all.jar com.nebs.core.ClaudeSkill [dir]` |
+| Library / `-all` jar | `ClaudeSkill.install(Path.of(".claude/skills"))` (`dsh.nebsclient.core.ClaudeSkill`), or `java -cp nebs-api-<version>-all.jar dsh.nebsclient.core.ClaudeSkill [dir]` |
 | Claude Code plugin | `/plugin marketplace add DaylightNebula/NebsClient`, then `/plugin install nebs-client@nebs` |
 
 ## Troubleshooting JitPack

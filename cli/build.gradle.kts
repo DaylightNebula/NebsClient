@@ -27,7 +27,7 @@ kotlin {
 
 application {
     applicationName = "nebs-cli"
-    mainClass = "com.nebs.cli.MainKt"
+    mainClass = "dsh.nebsclient.cli.MainKt"
 }
 
 // Let `./gradlew :cli:run --args="..."` read from the terminal in interactive mode.

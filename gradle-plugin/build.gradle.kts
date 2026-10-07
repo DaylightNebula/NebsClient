@@ -20,8 +20,8 @@ dependencies {
 gradlePlugin {
     plugins {
         create("nebs") {
-            id = "com.nebs.socket"
-            implementationClass = "com.nebs.gradle.NebsPlugin"
+            id = "dsh.nebsclient.socket"
+            implementationClass = "dsh.nebsclient.gradle.NebsPlugin"
             displayName = "Nebs Client socket"
             description = "Gradle tasks that send nebs-cli commands to a running Nebs Client mod."
         }

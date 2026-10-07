@@ -1,6 +1,6 @@
 ---
 name: nebs-client
-description: Launch and control Minecraft (Fabric 26.3) test clients with nebs-client — from the nebs-cli command line, the Java/Kotlin API (com.nebs.api.NebsClient, including .kts scripts), or the Gradle plugin com.nebs.socket. Use when a task involves starting offline Minecraft clients, joining a test server, moving/mining/placing/chatting as a player, reading player status, inventory, blocks, entities, screens or chat, taking screenshots, or writing automated tests and smoke tests against a Minecraft server or mod.
+description: Launch and control Minecraft (Fabric 26.3) test clients with nebs-client — from the nebs-cli command line, the Java/Kotlin API (dsh.nebsclient.api.NebsClient, including .kts scripts), or the Gradle plugin dsh.nebsclient.socket. Use when a task involves starting offline Minecraft clients, joining a test server, moving/mining/placing/chatting as a player, reading player status, inventory, blocks, entities, screens or chat, taking screenshots, or writing automated tests and smoke tests against a Minecraft server or mod.
 ---
 
 # nebs-client
@@ -11,8 +11,8 @@ listens on a local socket. Three front ends send it the same commands:
 | Front end | Use it for | Reference |
 |-----------|------------|-----------|
 | `nebs-cli` | One-off commands from a shell, interactive exploration, quick checks | [references/cli.md](references/cli.md) |
-| Java / Kotlin API (`com.nebs.api.NebsClient`) | Programs, JUnit tests, `.kts` / `.main.kts` scripts | [references/kotlin.md](references/kotlin.md), [references/java.md](references/java.md) |
-| Gradle plugin `com.nebs.socket` | Build tasks: launch clients, join a test server after deploying, smoke tests | [references/gradle.md](references/gradle.md) |
+| Java / Kotlin API (`dsh.nebsclient.api.NebsClient`) | Programs, JUnit tests, `.kts` / `.main.kts` scripts | [references/kotlin.md](references/kotlin.md), [references/java.md](references/java.md) |
+| Gradle plugin `dsh.nebsclient.socket` | Build tasks: launch clients, join a test server after deploying, smoke tests | [references/gradle.md](references/gradle.md) |
 
 Every client command (status, mine, chat, screenshot, …) is listed once in
 [references/commands.md](references/commands.md); all three front ends accept the same commands.

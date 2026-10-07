@@ -7,5 +7,5 @@ plugins {
 // The version lives in gradle.properties so releases can override it: -Pversion=1.2.3
 // The group can be overridden too (-Pnebs.group=...), which JitPack builds use; see jitpack.yml.
 allprojects {
-    group = providers.gradleProperty("nebs.group").getOrElse("com.nebs")
+    group = providers.gradleProperty("nebs.group").getOrElse("dsh.nebsclient")
 }

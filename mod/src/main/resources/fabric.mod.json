@@ -9,7 +9,7 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-      { "adapter": "kotlin", "value": "com.nebs.mod.NebsClientMod" }
+      { "adapter": "kotlin", "value": "dsh.nebsclient.mod.NebsClientMod" }
     ]
   },
   "mixins": ["nebs_client.mixins.json"],

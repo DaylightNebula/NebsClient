@@ -1,4 +1,4 @@
-# Gradle plugin `com.nebs.socket`
+# Gradle plugin `dsh.nebsclient.socket`
 
 Tasks that do what `nebs-cli` does, plus the full [Java/Kotlin API](kotlin.md) on the build script
 classpath. Adding the plugin to a build: [setup.md](setup.md).
@@ -6,7 +6,7 @@ classpath. Adding the plugin to a build: [setup.md](setup.md).
 ```kotlin
 // build.gradle.kts
 plugins {
-    id("com.nebs.socket") version "<version>"
+    id("dsh.nebsclient.socket") version "<version>"
 }
 
 nebs {                                                  // everything optional
@@ -48,9 +48,9 @@ them; leave it off when you need the reply.
 ## Preconfigured tasks
 
 ```kotlin
-import com.nebs.gradle.NebsCommandTask
-import com.nebs.gradle.NebsConnectTask
-import com.nebs.gradle.NebsLaunchClientTask
+import dsh.nebsclient.gradle.NebsCommandTask
+import dsh.nebsclient.gradle.NebsConnectTask
+import dsh.nebsclient.gradle.NebsLaunchClientTask
 
 tasks.register<NebsLaunchClientTask>("launchBot") {
     playerName = "Bot1"
@@ -75,7 +75,7 @@ Other task types: `NebsListClientsTask`, `NebsInstallClientTask`, `NebsStopClien
 The plugin puts `nebs-api` on the build script classpath:
 
 ```kotlin
-import com.nebs.api.NebsClient
+import dsh.nebsclient.api.NebsClient
 
 tasks.register("smokeTest") {
     dependsOn("deployToTestServer")          // your own task

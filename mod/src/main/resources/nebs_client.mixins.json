@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "com.nebs.mod.mixin",
+  "package": "dsh.nebsclient.mod.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": ["MinecraftMixin"],
   "injectors": {

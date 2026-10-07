@@ -1,10 +1,10 @@
 # Kotlin API
 
 Artifact: `nebs-api` (see [setup.md](setup.md) for repositories and coordinates). Package
-`com.nebs.api`. Method-by-method list of what each command does: [commands.md](commands.md).
+`dsh.nebsclient.api`. Method-by-method list of what each command does: [commands.md](commands.md).
 
 ```kotlin
-import com.nebs.api.*
+import dsh.nebsclient.api.*
 import java.time.Duration
 
 NebsClient { name = "Tester" }.use { client ->     // launches, installs template if needed, waits until loaded
@@ -44,7 +44,7 @@ Properties: `name`, `socket`, `pid`, `gameDirectory` (screenshots and logs live 
 - Timeouts are `java.time.Duration`: `client.mine(1, 64, 2, Duration.ofSeconds(60))`.
 - Clients you don't close keep running after the program exits. Prefer `use {}`.
 - `client.run("mine 1 64 2")` accepts any CLI command line and returns the raw `Response`
-  (`success`, `detail`, `data`, `result`); `send(message)` sends a `com.nebs.core.message.Message`.
+  (`success`, `detail`, `data`, `result`); `send(message)` sends a `dsh.nebsclient.core.message.Message`.
 
 ## Query results
 
@@ -105,13 +105,13 @@ with an **absolute** path to the `-all` jar:
 
 ```kotlin
 @file:DependsOn("/abs/path/nebs-api-0.2.0-all.jar")
-import com.nebs.api.NebsClient
+import dsh.nebsclient.api.NebsClient
 NebsClient().use { it.connect("localhost") }
 ```
 
 ## Lower level (`core`)
 
-`com.nebs.core` is what the API is built on: `ClientLauncher.launch(LaunchSpec(...))`,
+`dsh.nebsclient.core` is what the API is built on: `ClientLauncher.launch(LaunchSpec(...))`,
 `ClientRegistry.active(home)`, `ClientRegistry.broadcast(clients, message)`,
 `TemplateInstaller.install(InstallSpec(...))`. Use it only when the API lacks something, e.g.
 broadcasting one message to many clients in parallel.

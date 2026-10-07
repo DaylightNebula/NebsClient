@@ -1,6 +1,6 @@
 {
   "name": "nebs-client",
-  "description": "Teaches Claude to launch and control Minecraft test clients with nebs-client: the nebs-cli command line, the Java/Kotlin API and the com.nebs.socket Gradle plugin.",
+  "description": "Teaches Claude to launch and control Minecraft test clients with nebs-client: the nebs-cli command line, the Java/Kotlin API and the dsh.nebsclient.socket Gradle plugin.",
   "author": {
     "name": "DaylightNebula"
   },

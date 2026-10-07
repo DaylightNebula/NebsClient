@@ -115,4 +115,4 @@ fields are its arguments. Every message gets a `response`:
 ← {"type":"response","success":true,"detail":"minecraft:grass_block","data":{},"result":{"x":4,"y":-61,"z":-2,"block":"minecraft:grass_block","properties":{"snowy":"false"},"loaded":true}}
 ```
 
-The exact message shapes are the classes in `com.nebs.core.message`.
+The exact message shapes are the classes in `dsh.nebsclient.core.message`.

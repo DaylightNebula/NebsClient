@@ -5,7 +5,7 @@
 //
 // Uses the nebs home in $NEBS_HOME, or ./.nebs (the client template is installed there the first time).
 
-import com.nebs.api.NebsClient
+import dsh.nebsclient.api.NebsClient
 
 val host = args.getOrElse(0) { "localhost" }
 val port = args.getOrNull(1)?.toInt() ?: 25565

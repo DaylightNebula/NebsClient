@@ -1,7 +1,7 @@
-import com.nebs.api.ClientOptions;
-import com.nebs.api.NebsClient;
-import com.nebs.api.PlayerStatus;
-import com.nebs.api.ScreenshotInfo;
+import dsh.nebsclient.api.ClientOptions;
+import dsh.nebsclient.api.NebsClient;
+import dsh.nebsclient.api.PlayerStatus;
+import dsh.nebsclient.api.ScreenshotInfo;
 
 /**
  * The same as hello.main.kts, in Java.
