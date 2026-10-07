@@ -7,9 +7,14 @@ before_install:
 # Publish under JitPack's coordinates (com.github.DaylightNebula.NebsClient:<module>:<tag>), so the
 # POMs' dependencies between modules point at artifacts JitPack actually serves.
 #
-# The wrapper is started with -classpath instead of ./gradlew: since early October 2026, `java -jar`
-# fails on JitPack's "latest" build image with "An unexpected error occurred while trying to open
-# file" for any jar (https://github.com/jitpack/jitpack.io/issues/8096). Go back to ./gradlew once
-# that's fixed.
+# Since early October 2026, Java on JitPack's "latest" build image can't read jars in the checkout:
+# `java -jar` fails with "An unexpected error occurred while trying to open file" and `-cp` finds no
+# classes (https://github.com/jitpack/jitpack.io/issues/8096). The first lines below only print
+# diagnostics (they never fail the build). The last line tries ./gradlew's wrapper with -cp, then a
+# copy of the wrapper outside the checkout, then a Gradle installed by SDKMAN. Once JitPack is
+# fixed, all of this can go back to: ./gradlew publishToMavenLocal -x test -Pnebs.group=... -Pversion=...
 install:
-  - export JAVA_HOME="${SDKMAN_DIR:-$HOME/.sdkman}/candidates/java/25.0.4-tem"; export PATH="$JAVA_HOME/bin:$PATH"; echo "JAVA_HOME=$JAVA_HOME"; java -version; java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain publishToMavenLocal -x test -Pnebs.group=$GROUP.$ARTIFACT -Pversion=$VERSION
+  - echo "== system"; uname -a; head -2 /etc/os-release; ldd --version | head -1; id; pwd; df -hT . /tmp "$HOME" || true
+  - echo "== wrapper jar (expected sha256 238e777fcddd7e34f9708186085def2abd6e08e658505b38718d79d74c21abd5)"; ls -la gradle/wrapper; sha256sum gradle/wrapper/gradle-wrapper.jar; unzip -t gradle/wrapper/gradle-wrapper.jar | tail -1 || true
+  - export JAVA_HOME="${SDKMAN_DIR:-$HOME/.sdkman}/candidates/java/25.0.4-tem"; export PATH="$JAVA_HOME/bin:$PATH"; echo "== java 25 reading the jar in place / in /tmp / in HOME (ClassNotFoundException = unreadable; anything else = readable)"; java -version; cp gradle/wrapper/gradle-wrapper.jar /tmp/probe.jar; cp gradle/wrapper/gradle-wrapper.jar "$HOME/probe.jar"; for j in gradle/wrapper/gradle-wrapper.jar /tmp/probe.jar "$HOME/probe.jar"; do echo "-- $j"; java -cp "$j" org.gradle.wrapper.GradleWrapperMain --help 2>&1 | head -2; done; echo "== system java"; /usr/bin/java -version; /usr/bin/java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --help 2>&1 | head -2 || true
+  - export JAVA_HOME="${SDKMAN_DIR:-$HOME/.sdkman}/candidates/java/25.0.4-tem"; export PATH="$JAVA_HOME/bin:$PATH"; ARGS="publishToMavenLocal -x test -Pnebs.group=$GROUP.$ARTIFACT -Pversion=$VERSION"; mkdir -p "$HOME/nebs-wrapper"; cp gradle/wrapper/gradle-wrapper.* "$HOME/nebs-wrapper/"; echo "== build - wrapper in place"; java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain $ARGS || { echo "== build - wrapper copied to HOME"; java -cp "$HOME/nebs-wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain $ARGS; } || { echo "== build - SDKMAN gradle"; source "${SDKMAN_DIR:-$HOME/.sdkman}/bin/sdkman-init.sh"; sdk install gradle 9.8.0 && "${SDKMAN_DIR:-$HOME/.sdkman}/candidates/gradle/9.8.0/bin/gradle" $ARGS; }

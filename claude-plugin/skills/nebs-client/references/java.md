@@ -59,7 +59,7 @@ try (NebsClient client = new NebsClient(new ClientOptions().name("Javy"))) {   /
 ## Running a single file
 
 ```bash
-java -cp nebs-api-0.3.1-all.jar HelloNebs.java localhost 25565
+java -cp nebs-api-0.3.2-all.jar HelloNebs.java localhost 25565
 ```
 
 The `-all` jar (attached to every GitHub release, or `./gradlew :api:allJar` in this repo) bundles
